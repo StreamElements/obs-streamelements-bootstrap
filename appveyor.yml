@@ -1,0 +1,191 @@
+version: '{build}'
+branches:
+  only:
+  - master
+image: Visual Studio 2019
+configuration: RelWithDebInfo
+clone_folder: c:\local\source
+init:
+- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      QT_VERSION: 6
+      QT_DIR: C:\Qt\6.3.1
+      QT5_DIR:
+      QT6_DIR: C:\Qt\6.3.1
+      CHECKOUT: master
+      GENERATOR: Visual Studio 17 2022
+      OBS_DEPS_VERSION: 2022-08-02
+install:
+- cmd: >-
+    if not exist c:\local md c:\local
+
+    git clone --recursive https://github.com/jp9000/obs-studio.git c:\local\obs-studio
+
+    cd /d c:\local\obs-studio
+
+    git checkout %CHECKOUT%
+
+
+
+    cd /d c:\local\obs-studio
+
+    xcopy c:\local\source\*.* c:\local\obs-studio\plugins\obs-streamelements-bootstrap /S /E /I /Y
+
+
+    echo add_subdirectory(obs-streamelements-bootstrap) >c:\local\obs-studio\plugins\CMakeLists.txt
+
+cache:
+- c:\local\obs-build-dependencies
+build_script:
+- cmd: >-
+    cd /d c:\local\obs-studio
+
+- ps: >-
+    .\CI\windows\01_install_dependencies.ps1 -Verbose -BuildArch x64
+
+- ps: >-
+    $CmakeCommand = @(
+      "-S . -B `"build64_qt${Env:QT_VERSION}`"",
+      "-G `"${Env:GENERATOR}`"",
+      "-DCMAKE_GENERATOR_PLATFORM=`"x64`"",
+      "-DCMAKE_SYSTEM_VERSION=`"10.0.22000.0`"",
+      "-DCEF_ROOT_DIR=`"c:/local/obs-build-dependencies/cef_binary_4638_windows_x64`"",
+      "-DVLC_PATH=`"c:/local/obs-build-dependencies/vlc-3.0.0-git`"",
+      "-DCMAKE_INSTALL_PREFIX=`"build64_qt${Env:QT_VERSION}/install`"",
+      "-DCOPIED_DEPENDENCIES=OFF",
+      "-DCOPY_DEPENDENCIES=ON",
+      "-DBUILD_FOR_DISTRIBUTION=`"OFF`"",
+      "-DDepsPath64=c:/local/obs-build-dependencies/windows-deps-${Env:OBS_DEPS_VERSION}-x64",
+      "-Wno-error=dev -Wno-dev -Wno-deprecated",
+      "-DENABLE_AJA=OFF",
+      "-DENABLE_BROWSER=OFF",
+      "-DENABLE_COREAUDIO_ENCODER=OFF",
+      "-DENABLE_DECKLINK=OFF",
+      "-DENABLE_FFMPEG_LOGGING=OFF",
+      "-DENABLE_FFMPEG_MUX_DEBUG=OFF",
+      "-DENABLE_FREETYPE=OFF",
+      "-DENABLE_HEVC=OFF",
+      "-DENABLE_IVCAM=OFF",
+      "-DENABLE_LIBFDK=OFF",
+      "-DENABLE_NVAFX=OFF",
+      "-DENABLE_QSV11=OFF",
+      "-DENABLE_RNNOISE=OFF",
+      "-DENABLE_RTMPS=OFF",
+      "-DENABLE_SCRIPTING=OFF",
+      "-DENABLE_SCRIPTING_LUA=OFF",
+      "-DENABLE_SCRIPTING_PYTHON=OFF",
+      "-DENABLE_SERVICE_UPDATES=OFF",
+      "-DENABLE_SIMDE=OFF",
+      "-DENABLE_SPEEXDSP=OFF",
+      "-DENABLE_UI=OFF",
+      "-DENABLE_UPDATER=OFF",
+      "-DENABLE_VIRTUALCAM=OFF",
+      "-DENABLE_VLC=OFF",
+      "-DENABLE_VST=OFF",
+      "-DQT_VERSION=${Env:QT_VERSION}",
+      "-DQTDIR=${Env:QTDIR}",
+      "-DQt5_DIR=`"${Env:QT5_DIR}`"",
+      "-DQt6_DIR=`"${Env:QT6_DIR}`"",
+      "-DCMAKE_PREFIX_PATH=${Env:QTDIR}",
+      "-DVIRTUALCAM_GUID=`"A3FCE0F5-3493-419F-958A-ABA1250EC20B`"",
+      "-DTHREADS_HAVE_PTHREAD_ARG=OFF"
+    )
+
+    Invoke-Expression "cmake ${CmakeCommand}"
+
+    Invoke-Expression "cmake --build build64_qt${Env:QT_VERSION} --config RelWithDebInfo"
+
+- cmd: >-
+    echo.Pack 64bit artifacts...
+
+    cd /d c:\local\obs-studio\build64_qt%QT_VERSION%\rundir\RelWithDebInfo
+
+    7z a c:\local\source\build64.zip .
+
+- cmd: >-
+    cd /d c:\local\obs-studio
+
+- ps: >-
+    .\CI\windows\01_install_dependencies.ps1 -Verbose -BuildArch x86
+
+- ps: >-
+    $CmakeCommand = @(
+      "-S . -B `"build32_qt${Env:QT_VERSION}`"",
+      "-G `"${Env:GENERATOR}`"",
+      "-DCMAKE_GENERATOR_PLATFORM=`"Win32`"",
+      "-DCMAKE_SYSTEM_VERSION=`"10.0.22000.0`"",
+      "-DCMAKE_PREFIX_PATH=`"build32_qt${Env:QT_VERSION}`"",
+      "-DCEF_ROOT_DIR=`"c:/local/obs-build-dependencies/cef_binary_4638_windows_x86`"",
+      "-DVLC_PATH=`"c:/local/obs-build-dependencies/vlc-3.0.0-git`"",
+      "-DCMAKE_INSTALL_PREFIX=`"build32/install`"",
+      "-DCOPIED_DEPENDENCIES=OFF",
+      "-DCOPY_DEPENDENCIES=ON",
+      "-DBUILD_FOR_DISTRIBUTION=`"OFF`"",
+      "-DDepsPath32=c:/local/obs-build-dependencies/windows-deps-${Env:OBS_DEPS_VERSION}-x86",
+      "-Wno-error=dev -Wno-dev -Wno-deprecated",
+      "-DENABLE_AJA=OFF",
+      "-DENABLE_BROWSER=OFF",
+      "-DENABLE_COREAUDIO_ENCODER=OFF",
+      "-DENABLE_DECKLINK=OFF",
+      "-DENABLE_FFMPEG_LOGGING=OFF",
+      "-DENABLE_FFMPEG_MUX_DEBUG=OFF",
+      "-DENABLE_FREETYPE=OFF",
+      "-DENABLE_HEVC=OFF",
+      "-DENABLE_IVCAM=OFF",
+      "-DENABLE_LIBFDK=OFF",
+      "-DENABLE_NVAFX=OFF",
+      "-DENABLE_QSV11=OFF",
+      "-DENABLE_RNNOISE=OFF",
+      "-DENABLE_RTMPS=OFF",
+      "-DENABLE_SCRIPTING=OFF",
+      "-DENABLE_SCRIPTING_LUA=OFF",
+      "-DENABLE_SCRIPTING_PYTHON=OFF",
+      "-DENABLE_SERVICE_UPDATES=OFF",
+      "-DENABLE_SIMDE=OFF",
+      "-DENABLE_SPEEXDSP=OFF",
+      "-DENABLE_UI=OFF",
+      "-DENABLE_UPDATER=OFF",
+      "-DENABLE_VIRTUALCAM=OFF",
+      "-DENABLE_VLC=OFF",
+      "-DENABLE_VST=OFF",
+      "-DQT_VERSION=${Env:QT_VERSION}",
+      "-DQTDIR=${Env:QTDIR}",
+      "-DQt5_DIR=`"${Env:QT5_DIR}`"",
+      "-DQt6_DIR=`"${Env:QT6_DIR}`"",
+      "-DCMAKE_PREFIX_PATH=${Env:QTDIR}",
+      "-DVIRTUALCAM_GUID=`"A3FCE0F5-3493-419F-958A-ABA1250EC20B`"",
+      "-DTHREADS_HAVE_PTHREAD_ARG=OFF"
+    )
+
+    Invoke-Expression "cmake ${CmakeCommand}"
+
+    Invoke-Expression "cmake --build build32_qt${Env:QT_VERSION} --config RelWithDebInfo"
+
+- cmd: >-
+    echo.Pack 32bit artifacts...
+
+    cd /d c:\local\obs-studio\build32_qt%QT_VERSION%\rundir\RelWithDebInfo
+
+    7z a c:\local\source\build32.zip .
+
+test: off
+artifacts:
+- path: build32.zip
+  name: build32
+- path: build64.zip
+  name: build64
+deploy:
+- provider: S3
+  access_key_id: AKIAJESHQW2DGHPN57KQ
+  secret_access_key:
+    secure: lhOyqT4/E0Oqv8BOQR81rx/SweOIbDELTYW7iJTqRz5shmkZ8eXMCgFzcIuXyvpB
+  bucket: obs-builds
+  folder: obs-streamelements-bootstrap/latest/windows
+  artifact: build32,build64
+  max_error_retry: 5
+  on:
+    branch: master
+on_success:
+- cmd: set

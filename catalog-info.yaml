@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: obs-streamelements-bootstrap
+  description: OBS.Live bootstrap DLL to choose between qt5 & qt6 implementations on Windows
+  annotations:
+  	backstage.io/techdocs-ref: url:https://github.com/StreamElements/obs-streamelements-bootstrap/tree/master/docs
+    github.com/project-slug: StreamElements/obs-streamelements-bootstrap
+    circleci.com/project-slug: github/StreamElements/obs-streamelements-bootstrap
+spec:
+  type: service
+  lifecycle: production
+  owner: live
+  system: obslive
