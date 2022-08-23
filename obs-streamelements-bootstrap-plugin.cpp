@@ -73,6 +73,7 @@ typedef void (*obs_module_post_load_func_t)(void);
 typedef void (*obs_module_unload_func_t)(void);
 typedef void (*obs_module_set_locale_func_t)(const char*);
 typedef void (*obs_module_free_locale_func_t)(void);
+typedef int64_t (*streamelements_get_version_number_func_t)(void);
 
 extern "C" bool obs_module_load(void)
 {
@@ -201,4 +202,19 @@ extern "C" void obs_module_free_locale(void)
 			(func)();
 		}
 	}
+}
+
+MODULE_EXPORT int64_t streamelements_get_version_number(void)
+{
+	if (g_loadedDLL) {
+		streamelements_get_version_number_func_t func =
+			(streamelements_get_version_number_func_t)GetProcAddress(
+				g_loadedDLL, "streamelements_get_version_number");
+
+		if (func) {
+			return func();
+		}
+	}
+
+	return (int64_t)0L;
 }
