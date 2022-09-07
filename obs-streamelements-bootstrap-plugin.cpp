@@ -3,6 +3,7 @@
 #include "obs-streamelements-bootstrap-config.h"
 
 #include <windows.h>
+#include <obs.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
@@ -101,7 +102,22 @@ extern "C" bool obs_module_load(void)
 	path_qt6.append(
 		L".qt6.dymod."); // traing point prevents LoadLibraryW from adding ".DLL" to the file name
 
-	g_loadedDLL = LoadLibraryW(path_qt5.c_str());
+	if (obs_get_version() < MAKE_SEMANTIC_VERSION(28, 0, 0)) {
+		// Only for OBS major version below 28, try loading Qt5-purposed plugin flavor.
+		// OBS 28+ comes with Qt6, so if OBS major version is at least 28, we can safely assume that Qt6 is required.
+		// This check is necessary to prevent Qt5 DLLs from accidentally loading from other programs' paths, and breaking OBS.
+
+		blog(LOG_INFO,
+		     "obs-streamelements-bootstrap: trying to load Qt5 flavor of a plugin for OBS version %s",
+		     obs_get_version_string());
+
+		g_loadedDLL = LoadLibraryW(path_qt5.c_str());
+	} else {
+		blog(LOG_INFO,
+		     "obs-streamelements-bootstrap: skipping trying to load Qt5 flavor of a plugin for OBS version %s",
+		     obs_get_version_string());
+	}
+
 	if (!g_loadedDLL) {
 		g_loadedDLL = LoadLibraryW(path_qt6.c_str());
 	}
